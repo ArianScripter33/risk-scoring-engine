@@ -2,57 +2,56 @@
 
 ## 1. Visión General
 
-Este repositorio contiene un proyecto de nivel profesional que demuestra la construcción de un sistema de Machine Learning de extremo a extremo para el scoring de riesgo crediticio. El objetivo es simular un entorno de producción real, aplicando las mejores prácticas de **Ingeniería de Machine Learning (MLOps)** y **Arquitectura de Sistemas de ML en la Nube**.
+Este repositorio contiene un proyecto de nivel profesional que demuestra la construcción de un sistema de Machine Learning de extremo a extremo para el scoring de riesgo crediticio. El objetivo es simular un entorno de producción real, aplicando las mejores prácticas de **Ingeniería de Machine Learning (MLOps)** y **Arquitectura de Sistemas**. 
+
+La arquitectura del proyecto está perfectamente diseñada para ser la base que procese el dataset completo de "Home Credit Default Risk"
 
 El proyecto está diseñado para ser una pieza central de un portafolio, alineado con las habilidades más demandadas por la industria para roles de **Senior ML Engineer** y **Arquitecto de ML**.
 
-Para una inmersión profunda en la arquitectura, los requerimientos y el plan de implementación, por favor consulte la documentación detallada en la carpeta `/docs`:
--   **[`docs/design.md`](docs/design.md):** Documento de Diseño y Arquitectura Técnica.
--   **[`docs/requirements.md`](docs/requirements.md):** Requerimientos de Producto y Criterios de Aceptación.
--   **[`docs/tasks.md`](docs/tasks.md):** Plan de Implementación y Checklist de Tareas.
--   **[`docs/implementation_notes.md`](docs/implementation_notes.md):** Notas Técnicas para el Desarrollo.
+## 2. Stack Tecnológico
 
-## 2. Stack Tecnológico Principal
-
-Este proyecto utiliza un stack tecnológico moderno, pragmático y basado en servicios gestionados de **Google Cloud Platform (GCP)** para maximizar la eficiencia y la escalabilidad.
-
--   **Lenguaje y Librerías:** Python, Pandas, Scikit-Learn, XGBoost/LightGBM
--   **API:** FastAPI
--   **Cloud Provider:** Google Cloud Platform (GCP)
+-   **Lenguaje:** Python 3.11+
+-   **Librerías de ML:** Scikit-Learn, Pandas, NumPy
+-   **Orquestación de Pipeline:** [DVC (Data Version Control)](https://dvc.org/)
+-   **Servidor de API:** FastAPI, Uvicorn
 -   **Contenerización:** Docker
 -   **CI/CD:** GitHub Actions
--   **Orquestación de Pipelines:** Vertex AI Pipelines
--   **Registro y Tracking:** Vertex AI Model Registry & Experiments
--   **Despliegue Serverless:** Cloud Run
--   **Monitoreo de Modelos:** Vertex AI Model Monitoring
--   **Dashboarding:** Streamlit
+-   **Cloud Target (Visión):** Google Cloud Platform (Vertex AI, Cloud Run)
 
 ## 3. Estructura del Proyecto
 
-La estructura del proyecto es modular y está diseñada para la escalabilidad y el mantenimiento, separando claramente las responsabilidades:
+La estructura del proyecto es modular y está diseñada para la escalabilidad y el mantenimiento.
 
 ```
 /
 ├── .github/              # Workflows de CI/CD con GitHub Actions.
-├── data/                 # Datos del proyecto (no versionados en Git).
-├── docs/                 # Documentación clave del proyecto.
-├── notebooks/            # Jupyter notebooks para análisis exploratorio.
+├── data/                 # Datos (01_raw, 03_primary, 04_features). Gestionado por DVC.
+├── docs/                 # Documentación de alto nivel del proyecto.
+├── models/               # Modelos entrenados y serializados (gestionado por DVC).
 ├── src/                  # Código fuente principal de la aplicación.
 │   ├── api/              # Código para la API de inferencia (FastAPI).
-│   ├── data/             # Scripts para el procesamiento de datos.
-│   ├── features/         # Scripts para la ingeniería de características.
-│   ├── models/           # Scripts para entrenar y evaluar modelos.
-│   └── monitoring/       # Scripts para el monitoreo de drift.
+│   ├── data/             # Scripts para el procesamiento de datos (stage 1).
+│   ├── features/         # Scripts para la ingeniería de características (stage 2).
+│   └── models/           # Scripts para entrenar y evaluar modelos (stage 3).
 ├── tests/                # Pruebas unitarias y de integración.
 ├── Dockerfile            # Define la imagen Docker para producción.
+├── dvc.yaml              # Define el pipeline de MLOps.
+├── params.yaml           # Parámetros para el pipeline (ej. tipo de modelo).
 └── requirements.txt      # Dependencias de Python.
 ```
 
-## 4. Instalación y Uso
+## 4. Guía de Inicio Rápido
+
+### 4.1. Pre-requisitos
+
+-   Python 3.11+
+-   Git
+
+### 4.2. Instalación
 
 1.  **Clonar el repositorio:**
     ```bash
-    git clone <https://github.com/ArianStoned33/risk-scoring-engine.git>
+    git clone https://github.com/ArianStoned33/risk-scoring-engine.git
     cd risk-scoring-engine
     ```
 
@@ -62,11 +61,72 @@ La estructura del proyecto es modular y está diseñada para la escalabilidad y 
     source venv/bin/activate
     pip install -r requirements.txt
     ```
+    *Nota: El pipeline de DVC (`dvc.yaml`) está configurado para usar este entorno virtual.*
 
-3.  **Configurar variables de entorno:**
-    Crea un archivo `.env` a partir de `.env.example` y rellena las variables necesarias (credenciales de GCP, nombre del bucket, etc.).
+3.  **Configurar datos iniciales (Opcional):**
+    Este proyecto puede generar datos de demostración. Si tienes los archivos `application_train.csv` y `bureau.csv`, colócalos en `data/01_raw/`. De lo contrario, los scripts los generarán automáticamente.
 
-4.  **Ejecutar el pipeline de entrenamiento (Ejemplo):**
-    Los flujos de trabajo se ejecutan a través de scripts en `src/`. Para entrenar un modelo:
-    ```bash
-    python src/models/train_model.py
+## 5. Flujo de Trabajo (Workflow)
+
+### 5.1. Ejecutar el Pipeline de Machine Learning
+
+El pipeline completo (procesamiento de datos, ingeniería de características y entrenamiento del modelo) se gestiona con DVC. Para ejecutarlo, simplemente corre:
+
+```bash
+dvc repro
+```
+
+Este comando ejecutará las etapas definidas en `dvc.yaml` en el orden correcto, generando los artefactos (`data/04_features/`, `models/credit_risk_model_logistic_regression.pkl`).
+
+### 5.2. Levantar la API de Scoring
+
+Una vez que el modelo ha sido entrenado por el pipeline de DVC, puedes levantar el servidor de inferencia:
+
+```bash
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+```
+
+La API estará disponible en `http://localhost:8000`.
+
+### 5.3. Realizar una Predicción
+
+Puedes enviar una solicitud `POST` al endpoint `/score` para obtener una predicción de riesgo.
+
+**Ejemplo con `curl`:**
+
+```bash
+curl -X 'POST' \
+  'http://localhost:8000/score' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d 
+  {
+    "AMT_INCOME_TOTAL": 202500.0,
+    "AMT_CREDIT": 406597.5,
+    "AMT_ANNUITY": 24700.5,
+    "DAYS_BIRTH": -9461,
+    "DAYS_EMPLOYED": -637
+  }
+```
+
+**Respuesta Esperada:**
+
+```json
+{
+  "prediction": 0,
+  "probability": 0.265,
+  "risk_level": "Bajo"
+}
+```
+
+Puedes consultar la documentación interactiva de la API generada por FastAPI en `http://localhost:8000/docs`.
+
+## 6. Pruebas y CI/CD
+
+El proyecto incluye un pipeline de Integración Continua (`.github/workflows/ci.yml`) que se activa en cada `push` o `pull request` a la rama `main`. Este workflow instala las dependencias y ejecuta las pruebas unitarias para garantizar la calidad del código.
+
+Para ejecutar las pruebas localmente:
+
+```bash
+python -m pytest tests/
+```
