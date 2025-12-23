@@ -1,132 +1,83 @@
-# Motor de Scoring de Riesgo Crediticio End-to-End 🏦
+# 🛡️ Risk Scoring Engine Professional
 
-## 1. Visión General
+Este repositorio contiene un sistema de **Machine Learning de Grado Industrial** para la evaluación de riesgo crediticio. El proyecto simula un entorno de producción real, aplicando metodologías de **MLOps**, **Ingeniería de Características** y **Arquitectura de Microservicios**.
 
-Este repositorio contiene un proyecto de nivel profesional que demuestra la construcción de un sistema de Machine Learning de extremo a extremo para el scoring de riesgo crediticio. El objetivo es simular un entorno de producción real, aplicando las mejores prácticas de **Ingeniería de Machine Learning (MLOps)** y **Arquitectura de Sistemas**. 
+## 🚀 Inicio Rápido
 
-La arquitectura del proyecto está perfectamente diseñada para ser la base que procese el dataset completo de "Home Credit Default Risk"
+### 1. Instalación
 
-El proyecto está diseñado para ser una pieza central de un portafolio, alineado con las habilidades más demandadas por la industria para roles de **Senior ML Engineer** y **Arquitecto de ML**.
-
-## 2. Stack Tecnológico
-
--   **Lenguaje:** Python 3.11+
--   **Librerías de ML:** Scikit-Learn, Pandas, NumPy
--   **Orquestación de Pipeline:** [DVC (Data Version Control)](https://dvc.org/)
--   **Servidor de API:** FastAPI, Uvicorn
--   **Contenerización:** Docker
--   **CI/CD:** GitHub Actions
--   **Cloud Target (Visión):** Google Cloud Platform (Vertex AI, Cloud Run)
-
-## 3. Estructura del Proyecto
-
-La estructura del proyecto es modular y está diseñada para la escalabilidad y el mantenimiento.
-
-```
-/
-├── .github/              # Workflows de CI/CD con GitHub Actions.
-├── data/                 # Datos (01_raw, 03_primary, 04_features). Gestionado por DVC.
-├── docs/                 # Documentación de alto nivel del proyecto.
-├── models/               # Modelos entrenados y serializados (gestionado por DVC).
-├── src/                  # Código fuente principal de la aplicación.
-│   ├── api/              # Código para la API de inferencia (FastAPI).
-│   ├── data/             # Scripts para el procesamiento de datos (stage 1).
-│   ├── features/         # Scripts para la ingeniería de características (stage 2).
-│   └── models/           # Scripts para entrenar y evaluar modelos (stage 3).
-├── tests/                # Pruebas unitarias y de integración.
-├── Dockerfile            # Define la imagen Docker para producción.
-├── dvc.yaml              # Define el pipeline de MLOps.
-├── params.yaml           # Parámetros para el pipeline (ej. tipo de modelo).
-└── requirements.txt      # Dependencias de Python.
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-## 4. Guía de Inicio Rápido
+### 2. Ejecución del Pipeline (Orquestación con DVC)
 
-### 4.1. Pre-requisitos
-
--   Python 3.11+
--   Git
-
-### 4.2. Instalación
-
-1.  **Clonar el repositorio:**
-    ```bash
-    git clone https://github.com/ArianStoned33/risk-scoring-engine.git
-    cd risk-scoring-engine
-    ```
-
-2.  **Crear un entorno virtual e instalar dependencias:**
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
-    ```
-    *Nota: El pipeline de DVC (`dvc.yaml`) está configurado para usar este entorno virtual.*
-
-3.  **Configurar datos iniciales (Opcional):**
-    Este proyecto puede generar datos de demostración. Si tienes los archivos `application_train.csv` y `bureau.csv`, colócalos en `data/01_raw/`. De lo contrario, los scripts los generarán automáticamente.
-
-## 5. Flujo de Trabajo (Workflow)
-
-### 5.1. Ejecutar el Pipeline de Machine Learning
-
-El pipeline completo (procesamiento de datos, ingeniería de características y entrenamiento del modelo) se gestiona con DVC. Para ejecutarlo, simplemente corre:
+El motor utiliza **DVC** para garantizar la reproducibilidad. Para ejecutar el pipeline completo (desde limpieza de datos hasta entrenamiento):
 
 ```bash
 dvc repro
 ```
 
-Este comando ejecutará las etapas definidas en `dvc.yaml` en el orden correcto, generando los artefactos (`data/04_features/`, `models/credit_risk_model_logistic_regression.pkl`).
-
-### 5.2. Levantar la API de Scoring
-
-Una vez que el modelo ha sido entrenado por el pipeline de DVC, puedes levantar el servidor de inferencia:
+### 3. Lanzar la API de Producción (FastAPI)
 
 ```bash
-uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+export PYTHONPATH=$PYTHONPATH:$(pwd)
+python src/api/main.py
 ```
 
-La API estará disponible en `http://localhost:8000`.
+## 🏗️ Arquitectura Técnica
 
-### 5.3. Realizar una Predicción
+El sistema está diseñado bajo un paradigma modular:
 
-Puedes enviar una solicitud `POST` al endpoint `/score` para obtener una predicción de riesgo.
+1. **Ingeniería de Variables (`src/features`)**: Saneo proactivo de datos utilizando **Winsorization** y **Clipping** para manejar outliers. Generación de ratios financieros (Domain Knowledge).
+2. **Optimización Automática (`src/models`)**: Uso de **Optuna** con **MedianPruner** para una búsqueda de hiperparámetros eficiente.
+3. **Benchmarking de Modelos**: Selección automática del "Champion Model" comparando LightGBM, Random Forest y Regresión Logística.
+4. **Capa de Validación (`tests/`)**: Pruebas unitarias de integridad de datos, prevención de leakage e idempotencia.
+5. **Service Layer (`src/api`)**: Inferencia en tiempo real con FastAPI, validación de esquemas con Pydantic y documentación automática (Swagger).
 
-**Ejemplo con `curl`:**
+## 📡 Documentación de la API
+
+La API ofrece inferencia de alta performance. Puedes probarla en [http://localhost:8000/docs](http://localhost:8000/docs).
+
+### Ejemplo de Predicción (cURL)
 
 ```bash
-curl -X 'POST' \
-  'http://localhost:8000/score' \
-  -H 'accept: application/json' \
+curl -X 'POST' 'http://localhost:8000/predict' \
   -H 'Content-Type: application/json' \
-  -d 
-  {
-    "AMT_INCOME_TOTAL": 202500.0,
-    "AMT_CREDIT": 406597.5,
-    "AMT_ANNUITY": 24700.5,
-    "DAYS_BIRTH": -9461,
-    "DAYS_EMPLOYED": -637
-  }
+  -d '{
+    "AMT_INCOME_TOTAL": 100000,
+    "AMT_CREDIT": 500000,
+    "AMT_ANNUITY": 25000,
+    "AMT_GOODS_PRICE": 450000,
+    "DAYS_BIRTH": -15000,
+    "DAYS_EMPLOYED": -2000,
+    "NAME_CONTRACT_TYPE": "Cash loans",
+    "DAYS_CREDIT_mean": -1000,
+    "AMT_CREDIT_SUM_sum": 1000000
+  }'
 ```
 
-**Respuesta Esperada:**
+**Respuesta Saludable:**
 
 ```json
 {
+  "probability": 0.2606,
   "prediction": 0,
-  "probability": 0.265,
-  "risk_level": "Bajo"
+  "risk_level": "Low",
+  "model_version": "1.0.0"
 }
 ```
 
-Puedes consultar la documentación interactiva de la API generada por FastAPI en `http://localhost:8000/docs`.
+## 🧠 Decisiones de Diseño Key
 
-## 6. Pruebas y CI/CD
+- **Umbral de Decisión**: Establecido en 0.5 por defecto, aunque parametriza para ser ajustado según el costo del error (False Negative vs False Positive) del banco.
+- **Serialización con Joblib**: Utilizada por su alta eficiencia en el manejo de arreglos de Numpy pesados en modelos de ensambles.
+- **Persistent FeatureEngineer**: No solo guardamos el modelo, sino el objeto completo de ingeniería de variables para asegurar que la API limpie los datos exactamente igual que el entrenamiento.
 
-El proyecto incluye un pipeline de Integración Continua (`.github/workflows/ci.yml`) que se activa en cada `push` o `pull request` a la rama `main`. Este workflow instala las dependencias y ejecuta las pruebas unitarias para garantizar la calidad del código.
+## 🛠️ Stack Principal
 
-Para ejecutar las pruebas localmente:
-
-```bash
-python -m pytest tests/
-```
+- **ML**: Scikit-Learn, LightGBM, XGBoost, Optuna.
+- **Data**: Pandas, Numpy.
+- **Infra**: FastAPI, DVC, PyTest, Pydantic.
