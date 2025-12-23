@@ -71,49 +71,19 @@ class ModelEvaluator:
         if pipeline_file.exists():
             self.feature_pipeline = joblib.load(pipeline_file)
         
-        # Cargar datos de prueba (simulados)
-        # En producción, esto debería cargar datos reales de prueba
-        self._create_test_data()
+        # Cargar datos de prueba reales
+        data_path = Path("data/04_features")
+        logger.info(f"Cargando datos de prueba desde: {data_path}")
         
-    def _create_test_data(self) -> None:
-        """
-        Crea datos de prueba simulados para evaluación.
+        try:
+            self.X_test = np.load(data_path / "X_test.npy", allow_pickle=True)
+            self.y_test = np.load(data_path / "y_test.npy", allow_pickle=True)
+            logger.info(f"Datos de prueba cargados: {self.X_test.shape[0]} muestras")
+        except Exception as e:
+            raise FileNotFoundError(f"Error cargando datos de prueba: {e}. Asegúrate de haber ejecutado 'dvc repro'.")
         
-        TODO: En producción, cargar datos reales de prueba
-        """
-        logger.info("Creando datos de prueba simulados")
-        
-        # Generar datos de prueba
-        np.random.seed(42)
-        n_samples = 200
-        
-        # Simular features
-        edad = np.random.normal(35, 10, n_samples)
-        ingreso = np.random.lognormal(10.5, 0.5, n_samples)
-        historial = np.random.binomial(1, 0.7, n_samples)
-        deuda = np.random.lognormal(8, 1, n_samples)
-        
-        # Crear DataFrame
-        df = pd.DataFrame({
-            'edad': edad,
-            'ingreso_anual': ingreso,
-            'historial_crediticio': historial,
-            'deuda_actual': deuda
-        })
-        
-        # Simular target basado en features
-        prob_default = 1 / (1 + np.exp(-(-2 + 0.02*edad - 0.00001*ingreso - 0.5*historial + 0.0001*deuda)))
-        y = np.random.binomial(1, prob_default)
-        
-        # Aplicar pipeline de features
-        if self.feature_pipeline is not None:
-            self.X_test = self.feature_pipeline.transform(df)
-        else:
-            self.X_test = df.values
-        
-        self.y_test = y
-        
-        logger.info(f"Datos de prueba creados: {len(self.y_test)} muestras")
+    # Método _create_test_data eliminado porque ya cargamos datos reales
+
         
     def calculate_metrics(self) -> Dict[str, Any]:
         """
@@ -275,3 +245,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    

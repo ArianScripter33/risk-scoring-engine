@@ -93,12 +93,20 @@ class CreditRiskPredictor:
         else:
             raise ValueError("input_data debe ser dict o DataFrame")
         
-        # Validar columnas requeridas
-        required_columns = ['edad', 'ingreso_anual', 'historial_crediticio', 'deuda_actual']
+        # Validar columnas requeridas (Basado en el dataset de Home Credit)
+        # Nota: Estas son las columnas CRUDAS que espera el Feature Engineering
+        required_columns = [
+            'SK_ID_CURR', 'AMT_INCOME_TOTAL', 'AMT_CREDIT', 
+            'AMT_ANNUITY', 'DAYS_BIRTH', 'DAYS_EMPLOYED'
+        ]
+        
+        # Verificar si faltan columnas (excepto TARGET que no se necesita para predecir)
         missing_columns = [col for col in required_columns if col not in df.columns]
         
         if missing_columns:
-            raise ValueError(f"Columnas faltantes: {missing_columns}")
+            # Si faltan columnas, advertir pero permitir si es una predicción cruda que ya viene procesada
+            # (Aunque idealmente el input debería ser crudo para pasar por el pipeline)
+            logger.warning(f"Faltan columnas esperadas para el pipeline completo: {missing_columns}")
         
         return df
     
@@ -126,8 +134,9 @@ class CreditRiskPredictor:
             if self.feature_pipeline is not None:
                 X = self.feature_pipeline.transform(df)
             else:
-                # Placeholder: transformación básica si no hay pipeline
-                X = df[['edad', 'ingreso_anual', 'historial_crediticio', 'deuda_actual']].values
+                # Fallback: asumimos que X ya viene como array numérico si no hay pipeline
+                # Esto es arriesgado pero permite flexibilidad
+                X = df.values
             
             # Realizar predicción
             prediction = self.model.predict(X)[0]
@@ -179,7 +188,7 @@ class CreditRiskPredictor:
             if self.feature_pipeline is not None:
                 X = self.feature_pipeline.transform(df)
             else:
-                X = df[['edad', 'ingreso_anual', 'historial_crediticio', 'deuda_actual']].values
+                X = df.values
             
             # Realizar predicciones
             predictions = self.model.predict(X)
@@ -222,12 +231,15 @@ def make_prediction(input_data: Dict[str, Any], model_path: str = "models") -> D
 
 # Ejemplos de uso
 if __name__ == "__main__":
-    # Ejemplo de predicción individual
+    # Ejemplo de predicción individual (Datos dummy con esquema correcto)
     example_client = {
-        'edad': 35,
-        'ingreso_anual': 50000,
-        'historial_crediticio': 1,
-        'deuda_actual': 10000
+        'SK_ID_CURR': 100001,
+        'AMT_INCOME_TOTAL': 200000.0,
+        'AMT_CREDIT': 500000.0,
+        'AMT_ANNUITY': 25000.0,
+        'DAYS_BIRTH': -15000,
+        'DAYS_EMPLOYED': -2000,
+        'NAME_CONTRACT_TYPE': 'Cash loans' # Opcional si el pipeline lo maneja
     }
     
     try:
