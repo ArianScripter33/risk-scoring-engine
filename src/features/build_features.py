@@ -14,6 +14,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
+from sklearn.model_selection import train_test_split
 import argparse
 import joblib
 
@@ -35,6 +36,32 @@ class FeatureEngineer:
         self.pipeline = None
         self.feature_names = None
         
+    def clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Limpia anomalías y aplica restricciones de sentido común (Domain Knowledge).
+        """
+        logger.info("Aplicando limpieza de anomalías y outliers")
+        
+        # A. Asegurar valores positivos en montos financieros
+        money_cols = ['AMT_INCOME_TOTAL', 'AMT_CREDIT', 'AMT_ANNUITY', 'AMT_GOODS_PRICE']
+        for col in money_cols:
+            if col in df.columns:
+                # Si hay valores negativos por error, los pasamos a absoluto o NaN
+                df[col] = df[col].apply(lambda x: x if x >= 0 else np.nan)
+        
+        # B. Tratar Outliers Extremos (Winsorization al 99%)
+        # El 1% de la gente con ingresos absurdos no debería sesgar el modelo
+        if 'AMT_INCOME_TOTAL' in df.columns:
+            upper_limit = df['AMT_INCOME_TOTAL'].quantile(0.99)
+            df.loc[df['AMT_INCOME_TOTAL'] > upper_limit, 'AMT_INCOME_TOTAL'] = upper_limit
+            
+        # C. Validar edades (DAYS_BIRTH es negativo en este dataset)
+        # 120 años = ~43800 días
+        if 'DAYS_BIRTH' in df.columns:
+            df.loc[df['DAYS_BIRTH'] < -43800, 'DAYS_BIRTH'] = np.nan
+            
+        return df
+
     def engineer_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Aplica ingeniería de características al DataFrame.
@@ -53,9 +80,12 @@ class FeatureEngineer:
         df['CREDIT_TERM'] = df['AMT_ANNUITY'] / df['AMT_CREDIT']
         df['DAYS_EMPLOYED_PERCENT'] = df['DAYS_EMPLOYED'] / df['DAYS_BIRTH']
         
-        # 2. Limpieza de valores anómalos en DAYS_EMPLOYED
+        # 2. Limpieza de valores anómalos en DAYS_EMPLOYED -
         df['DAYS_EMPLOYED'].replace({365243: np.nan}, inplace=True)
-
+        
+        # Nuevas reglas de limpieza proactiva
+        df = self.clean_data(df)
+        
         logger.info(f"Nuevas features creadas. Columnas actuales: {list(df.columns)}")
         return df
 
@@ -91,12 +121,13 @@ class FeatureEngineer:
         
         return preprocessor
 
-    def fit_transform(self, df: pd.DataFrame) -> tuple:
+    def fit_transform(self, df: pd.DataFrame, test_size=0.2, random_state=42) -> tuple:
         """
-        Ajusta y transforma los datos.
+        Ajusta y transforma los datos, separando train/test para evitar leakage.
         """
-        logger.info("Ajustando y transformando datos con el pipeline de features")
+        logger.info("Iniciando procesamiento y separación de datos")
         
+        # 1. Feature Engineering (Seguro de hacer en todo el dataset porque es row-wise)
         df_engineered = self.engineer_features(df.copy())
         
         if 'TARGET' not in df_engineered.columns:
@@ -105,16 +136,43 @@ class FeatureEngineer:
         X = df_engineered.drop(['SK_ID_CURR', 'TARGET'], axis=1, errors='ignore')
         y = df_engineered['TARGET']
         
-        self.pipeline = self.create_preprocessing_pipeline(X)
-        X_transformed = self.pipeline.fit_transform(X)
+        # 2. Split Estratificado (ANTES de cualquier cálculo estadístico)
+        logger.info(f"Realizando split Train/Test (test_size={test_size})")
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=random_state, stratify=y
+        )
         
-        logger.info(f"Datos transformados. Shape de X: {X_transformed.shape}")
-        return X_transformed, y
+        # 3. Crear y Ajustar Pipeline SOLO con datos de entrenamiento
+        self.pipeline = self.create_preprocessing_pipeline(X_train)
+        
+        logger.info("Ajustando pipeline solo con X_train")
+        X_train_transformed = self.pipeline.fit_transform(X_train)
+        
+        logger.info("Transformando X_test con estadísticas de X_train")
+        X_test_transformed = self.pipeline.transform(X_test)
+        
+        logger.info(f"Shapes finales - Train: {X_train_transformed.shape}, Test: {X_test_transformed.shape}")
+        return X_train_transformed, X_test_transformed, y_train, y_test
+
+    def transform(self, df: pd.DataFrame) -> np.ndarray:
+        """
+        Aplica limpieza, ingeniería y preprocesamiento a un nuevo DataFrame.
+        """
+        logger.info("Transformando nuevos datos")
+        df_engineered = self.engineer_features(df.copy())
+        
+        # Eliminar columnas que no son features (si existen)
+        X = df_engineered.drop(['SK_ID_CURR', 'TARGET'], axis=1, errors='ignore')
+        
+        if self.pipeline is None:
+            raise ValueError("El pipeline no ha sido ajustado (fit) todavía.")
+            
+        return self.pipeline.transform(X)
 
     def save_pipeline(self, filepath: str):
-        """Guarda el pipeline en un archivo."""
-        logger.info(f"Guardando pipeline de features en: {filepath}")
-        joblib.dump(self.pipeline, filepath)
+        """Guarda la instancia completa del FeatureEngineer."""
+        logger.info(f"Guardando FeatureEngineer en: {filepath}")
+        joblib.dump(self, filepath)
 
 
 def main(input_path: str = "data/03_primary", output_path: str = "data/04_features") -> None:
@@ -133,13 +191,16 @@ def main(input_path: str = "data/03_primary", output_path: str = "data/04_featur
         logger.info(f"Datos cargados: {df.shape[0]} filas, {df.shape[1]} columnas")
         
         fe = FeatureEngineer()
-        X, y = fe.fit_transform(df)
+        X_train, X_test, y_train, y_test = fe.fit_transform(df)
         
         output_dir = Path(output_path)
         output_dir.mkdir(parents=True, exist_ok=True)
         
-        np.save(output_dir / "X_features.npy", X)
-        np.save(output_dir / "y_target.npy", y)
+        # Guardar los 4 sets
+        np.save(output_dir / "X_train.npy", X_train)
+        np.save(output_dir / "X_test.npy", X_test)
+        np.save(output_dir / "y_train.npy", y_train)
+        np.save(output_dir / "y_test.npy", y_test)
         fe.save_pipeline(output_dir / "feature_pipeline.pkl")
         
         logger.info(f"Características y pipeline guardados en: {output_path}")
