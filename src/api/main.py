@@ -1,117 +1,129 @@
-#!/usr/bin/env python3
-"""
-API de inferencia para el modelo de scoring de riesgo crediticio.
-"""
-
 import logging
 import joblib
-from fastapi import FastAPI
-from pydantic import BaseModel
 import pandas as pd
+import numpy as np
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
 from pathlib import Path
+import json
+from src.features.build_features import FeatureEngineer
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Credit Risk Scoring API",
-    description="API para predecir el riesgo de default crediticio.",
-    version="0.1.0"
+    title="Risk Scoring Engine API",
+    description="API para la predicción de riesgo crediticio utilizando modelos optimizados.",
+    version="1.0.0"
 )
 
-# --- Modelos de Datos (Pydantic) ---
-class ClientData(BaseModel):
-    """Define la estructura de los datos de entrada para un cliente."""
-    AMT_INCOME_TOTAL: float
-    AMT_CREDIT: float
-    AMT_ANNUITY: float
-    DAYS_BIRTH: int
-    DAYS_EMPLOYED: int
-    # Añade aquí cualquier otra feature que tu modelo espere
-
-class PredictionResponse(BaseModel):
-    """Define la estructura de la respuesta de la predicción."""
-    prediction: int
-    probability: float
-    risk_level: str
-
-# --- Carga del Modelo ---
+# --- CONFIGURACIÓN Y CARGA DE MODELOS ---
 MODEL_DIR = Path("models")
-PIPELINE_DIR = Path("data/04_features")
+FEATURES_DIR = Path("data/04_features")
 
-model = None
-feature_pipeline = None
+class ModelContainer:
+    def __init__(self):
+        self.model = None
+        self.pipeline = None
+        self.feature_names = None
+        self.config = None
+
+    def load(self):
+        try:
+            # 1. Cargar Configuración del Campeón
+            config_path = MODEL_DIR / "champion_config.json"
+            if not config_path.exists():
+                raise FileNotFoundError("No se encontró champion_config.json. Ejecuta el benchmark primero.")
+            
+            with open(config_path, "r") as f:
+                self.config = json.load(f)
+            
+            model_type = self.config["model_type"]
+            logger.info(f"Cargando modelo campeón: {model_type}")
+
+            # 2. Cargar el modelo .joblib
+            model_path = MODEL_DIR / f"{model_type}_model.joblib"
+            self.model = joblib.load(model_path)
+
+            # 3. Cargar el pipeline de features
+            pipeline_path = FEATURES_DIR / "feature_pipeline.pkl"
+            self.pipeline = joblib.load(pipeline_path)
+            
+            # Extraer nombres de las columnas para validación (desde el pipeline interno)
+            self.feature_names = self.pipeline.pipeline.get_feature_names_out()
+            
+            logger.info("Modelo y Pipeline cargados exitosamente.")
+        except Exception as e:
+            logger.error(f"Error cargando los artefactos: {e}")
+            raise e
+
+# Inicializar contenedor
+container = ModelContainer()
 
 @app.on_event("startup")
 async def startup_event():
-    global model, feature_pipeline
-    logger.info("Iniciando la API y cargando el modelo...")
-    try:
-        model_path = MODEL_DIR / "credit_risk_model_logistic_regression.pkl"
-        pipeline_path = PIPELINE_DIR / "feature_pipeline.pkl"
-        
-        model = joblib.load(model_path)
-        feature_pipeline = joblib.load(pipeline_path)
-        
-        logger.info("Modelo y pipeline de features cargados exitosamente.")
-    except FileNotFoundError as e:
-        logger.error(f"Error al cargar el modelo o el pipeline: {e}")
-        # En un entorno de producción, podrías querer que la API no inicie si no puede cargar el modelo.
-        model = None
-        feature_pipeline = None
+    container.load()
 
-# --- Endpoints ---
+# --- MODELOS DE DATOS (PYDANTIC) ---
+class ClientData(BaseModel):
+    """Esquema de entrada para un cliente."""
+    AMT_INCOME_TOTAL: float = Field(..., example=50000.0)
+    AMT_CREDIT: float = Field(..., example=200000.0)
+    AMT_ANNUITY: float = Field(..., example=15000.0)
+    AMT_GOODS_PRICE: float = Field(..., example=180000.0)
+    DAYS_BIRTH: int = Field(..., example=-15000)
+    DAYS_EMPLOYED: int = Field(..., example=-2000)
+    
+    # Permitir campos adicionales que el pipeline pueda requerir
+    class Config:
+        extra = "allow"
 
-@app.get("/health", tags=["Health Check"])
-async def health_check():
-    """
-    Endpoint para verificar que la API está funcionando.
-    """
-    return {"status": "ok", "model_loaded": model is not None}
+# --- ENDPOINTS ---
+@app.get("/")
+async def root():
+    return {"message": "Risk Scoring Engine API is Running", "model_info": container.config}
 
-@app.post("/score", response_model=PredictionResponse, tags=["Scoring"])
-async def predict_score(data: ClientData):
-    """
-    Realiza una predicción de riesgo crediticio para un cliente.
-    """
-    if not model or not feature_pipeline:
-        return {"error": "Modelo no cargado. La API no está lista para predicciones."}
-
-    logger.info(f"Recibida petición de scoring para: {data.dict()}")
-    
-    # Convertir datos de Pydantic a DataFrame de Pandas
-    input_df = pd.DataFrame([data.dict()])
-    
-    # Aplicar el pipeline de preprocesamiento
-    # Nota: El pipeline espera todas las columnas que usó en el entrenamiento.
-    # Aquí simplificamos asumiendo que las columnas del DataFrame coinciden.
-    # En un caso real, necesitarías asegurar que todas las columnas estén presentes.
-    
-    # Placeholder para columnas que el pipeline espera pero no vienen en la request
-    # Esto es una simplificación y debería manejarse de forma más robusta
-    for col in feature_pipeline.feature_names_in_:
-        if col not in input_df.columns:
-            input_df[col] = 0 # O un valor por defecto apropiado
-            
-    X_processed = feature_pipeline.transform(input_df)
-    
-    # Realizar predicción
-    prediction = model.predict(X_processed)[0]
-    probability = model.predict_proba(X_processed)[0, 1]
-    
-    # Determinar nivel de riesgo
-    if probability < 0.3:
-        risk_level = "Bajo"
-    elif probability < 0.7:
-        risk_level = "Medio"
-    else:
-        risk_level = "Alto"
-        
-    logger.info(f"Predicción: {prediction}, Probabilidad: {probability:.4f}")
-    
+@app.get("/health")
+async def health():
     return {
-        "prediction": int(prediction),
-        "probability": float(probability),
-        "risk_level": risk_level
+        "status": "healthy",
+        "model_loaded": container.model is not None,
+        "feature_engineer_loaded": container.pipeline is not None
     }
+
+@app.post("/predict")
+async def predict(data: ClientData):
+    """
+    Endpoint para predecir la probabilidad de default de un cliente.
+    """
+    if container.model is None:
+        raise HTTPException(status_code=503, detail="Modelo no cargado.")
+
+    try:
+        # 1. Convertir entrada a DataFrame
+        input_df = pd.DataFrame([data.dict()])
+        
+        # 2. El Feature Pipeline es ahora una instancia de FeatureEngineer
+        # que sabe limpiar y transformar los datos automáticamente.
+        X_transformed = container.pipeline.transform(input_df)
+        
+        # 3. Predicción de Probabilidad
+        probability = container.model.predict_proba(X_transformed)[0, 1]
+        
+        # 4. Decisión de Negocio (Umbral estándar 0.5)
+        prediction = 1 if probability > 0.5 else 0
+        
+        return {
+            "probability": round(float(probability), 4),
+            "prediction": prediction,
+            "risk_level": "High" if probability > 0.5 else "Low",
+            "model_version": container.config.get("metrics", {})
+        }
+    except Exception as e:
+        logger.error(f"Error en predicción: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
