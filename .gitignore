@@ -27,3 +27,12 @@ node_modules/
 # Task files
 # tasks.json
 # tasks/ 
+
+# Python & Project Specific
+venv/
+.genkit/
+.kilocode/
+__pycache__/
+*.pyc
+models/*.joblib
+reports/
