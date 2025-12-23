@@ -30,26 +30,26 @@ stages:
       nfiles: 1
     - path: src/features/build_features.py
       hash: md5
-      md5: c939cfcfecc68992d1a9216f90a13158
-      size: 5938
+      md5: f3dcb18a1abb81e94baf03eaef46ada1
+      size: 6989
     outs:
     - path: data/04_features
       hash: md5
-      md5: 28bc260a3e068b08b9908583d0c34de1.dir
-      size: 18393
-      nfiles: 3
+      md5: 74a1e563c3b4c55e9326743b085b09aa.dir
+      size: 18654
+      nfiles: 5
   train_model:
     cmd: venv/bin/python src/models/train_model.py
     deps:
     - path: data/04_features
       hash: md5
-      md5: 28bc260a3e068b08b9908583d0c34de1.dir
-      size: 18393
-      nfiles: 3
+      md5: 74a1e563c3b4c55e9326743b085b09aa.dir
+      size: 18654
+      nfiles: 5
     - path: src/models/train_model.py
       hash: md5
-      md5: cf5ddbf5e6811785b875f3baeec9718b
-      size: 4365
+      md5: 53523697c08f24ee13ea8bf781d20f65
+      size: 4324
     params:
       params.yaml:
         models:
@@ -57,5 +57,22 @@ stages:
     outs:
     - path: models/credit_risk_model_logistic_regression.pkl
       hash: md5
-      md5: 5294c7dad987d14c39a8757bebdf9c85
+      md5: 0159fb76fe2999932489c7612002dd28
       size: 1007
+  benchmark:
+    cmd: venv/bin/python src/models/compare_models.py
+    deps:
+    - path: data/04_features
+      hash: md5
+      md5: 74a1e563c3b4c55e9326743b085b09aa.dir
+      size: 18654
+      nfiles: 5
+    - path: src/models/compare_models.py
+      hash: md5
+      md5: 1e58473f5787ac3d08a2f3c95086705f
+      size: 2831
+    outs:
+    - path: reports/benchmark_results.csv
+      hash: md5
+      md5: 69d5ed0cc08260dcebb439aa8e1555f8
+      size: 230

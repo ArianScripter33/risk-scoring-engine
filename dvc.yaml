@@ -25,3 +25,12 @@ stages:
       - models
     outs:
       - models/credit_risk_model_logistic_regression.pkl
+
+  benchmark:
+    cmd: venv/bin/python src/models/compare_models.py
+    deps:
+      - src/models/compare_models.py
+      - data/04_features
+    outs:
+      - reports/benchmark_results.csv
+      - models/champion_config.json
