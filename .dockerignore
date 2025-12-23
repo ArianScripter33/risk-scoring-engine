@@ -1,12 +1,12 @@
-# Git
-.git
-.gitignore
-
-# Docker
-Dockerfile
-
-# Environment
-.env
 venv/
 __pycache__/
+.pytest_cache/
+.dvc/
+data/01_raw/
+data/02_intermediate/
+data/03_primary/
+.git/
+.env
 *.pyc
+*.joblib
+*.pkl

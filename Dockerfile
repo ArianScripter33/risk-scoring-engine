@@ -1,53 +1,32 @@
-# Multi-stage Dockerfile para optimizar tamaño de imagen
+# 1. Imagen base oficial (Python 3.11 Slim para que pese menos)
+FROM python:3.11-slim
 
-# Etapa 1: Builder - Instalación de dependencias
-FROM python:3.9-slim-buster as builder
-
-# Establecer variables de entorno para Python
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-# Instalar dependencias del sistema necesarias
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Crear entorno virtual
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Copiar archivo de requisitos
-COPY requirements.txt .
-
-# Instalar dependencias en el entorno virtual
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
-# Etapa 2: Imagen final - Solo runtime
-FROM python:3.9-slim-buster
-
-# Establecer variables de entorno
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PATH="/opt/venv/bin:$PATH"
-
-# Crear usuario no-root para seguridad
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-
-# Copiar entorno virtual desde la etapa builder
-COPY --from=builder /opt/venv /opt/venv
-
-# Establecer directorio de trabajo
+# 2. Establecer el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Copiar código fuente
+# 3. Instalar dependencias del sistema necesarias (LGBM y XGBoost requieren libs extras)
+RUN apt-get update && apt-get install -y \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# 4. Copiar e instalar dependencias de Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 5. Copiar el código fuente
 COPY src/ ./src/
+COPY params.yaml .
+# Nota: En producción, los modelos y datos deberían venir de DVC o un bucket,
+# pero para esta prueba local los incluiremos si existen.
+COPY models/ ./models/
+COPY data/04_features/ ./data/04_features/
 
-# Cambiar propietario de los archivos al usuario no-root
-RUN chown -R appuser:appuser /app
+# 6. Exponer el puerto de FastAPI
+EXPOSE 8000
 
-# Cambiar al usuario no-root
-USER appuser
+# 7. Variables de entorno importantes
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
 
-# Establecer comando por defecto para ejecutar el entrenamiento
-CMD ["python", "src/models/train_model.py"]
+# 8. Comando para iniciar la API
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
