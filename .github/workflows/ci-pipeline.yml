@@ -31,7 +31,13 @@ jobs:
         export PYTHONPATH=$PYTHONPATH:$(pwd)
         pytest tests/test_models.py
 
+    - name: Prepare Dummy Data for Docker
+      run: |
+        # Creamos las carpetas que Docker espera pero que no están en Git
+        mkdir -p data/04_features models
+        touch data/04_features/.keep models/.keep
+
     - name: Verify Docker Build
       run: |
-        # BLINDAJE 2: Verifica que el "envase" (Docker) sea válido antes del despliegue
+        # BLINDAJE 2: Verifica que el "envase" (Docker) sea válido
         docker build -t risk-engine-test .

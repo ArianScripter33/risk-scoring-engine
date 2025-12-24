@@ -2,7 +2,7 @@
 # ETAPA 1: Builder (Cocinero)
 # ==========================================
 # Usamos una imagen con herramientas de compilación pero que descartaremos después
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 WORKDIR /build
 
