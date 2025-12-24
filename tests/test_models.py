@@ -91,3 +91,24 @@ class TestMachineLearningPipeline:
         pred2 = model.model.predict_proba(X_test[:5])
         
         np.testing.assert_array_almost_equal(pred1, pred2)
+
+    def test_model_performance_threshold(self, mock_data):
+        """
+        SEGURIDAD: Verifica que el modelo supere un umbral mínimo de calidad.
+        Si el modelo es peor que el threshold, el test falla y bloquea el merge.
+        """
+        threshold = 0.60 # <--- Aquí defines tu estándar de calidad
+        
+        fe = FeatureEngineer()
+        X_train, X_test, y_train, y_test = fe.fit_transform(mock_data)
+        
+        model = CreditRiskModel(model_type='random_forest')
+        model.X_train, model.X_test = X_train, X_test
+        model.y_train, model.y_test = y_train, y_test
+        
+        model.create_model()
+        model.train()
+        metrics = model.validate()
+        
+        auc = metrics['test_auc']
+        assert auc >= threshold, f"Calidad insuficiente: AUC {auc:.4f} < {threshold}"

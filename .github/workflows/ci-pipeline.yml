@@ -7,24 +7,31 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  test-and-build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
         python-version: "3.11"
+        cache: 'pip' # <--- BLINDAJE 1: Cachea dependencias para ir 3x más rápido
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-mock  # Asegurar herramientas de test
+        pip install pytest pytest-mock
 
     - name: Run Integrity and Unit Tests
       run: |
         export PYTHONPATH=$PYTHONPATH:$(pwd)
         pytest tests/test_models.py
+
+    - name: Verify Docker Build
+      run: |
+        # BLINDAJE 2: Verifica que el "envase" (Docker) sea válido antes del despliegue
+        docker build -t risk-engine-test .
