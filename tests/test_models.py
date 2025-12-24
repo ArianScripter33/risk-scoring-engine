@@ -61,10 +61,14 @@ class TestMachineLearningPipeline:
     def test_feature_engineering_pipeline(self, mock_data):
         """Prueba que el pipeline de features puede procesar datos nuevos."""
         fe = FeatureEngineer()
-        X_train, X_test, y_train, y_test = fe.fit_transform(mock_data, test_size=0.2)
+        test_size = 0.2
+        X_train, X_test, y_train, y_test = fe.fit_transform(mock_data, test_size=test_size)
         
-        assert X_train.shape[0] == 80
-        assert X_test.shape[0] == 20
+        expected_train = int(len(mock_data) * (1 - test_size))
+        expected_test = int(len(mock_data) * test_size)
+        
+        assert X_train.shape[0] == expected_train
+        assert X_test.shape[0] == expected_test
         assert not np.isnan(X_train).any(), "Existen valores nulos tras el procesamiento"
 
     def test_model_training_and_prediction(self, mock_data):

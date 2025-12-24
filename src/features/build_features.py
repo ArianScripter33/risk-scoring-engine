@@ -80,8 +80,8 @@ class FeatureEngineer:
         df['CREDIT_TERM'] = df['AMT_ANNUITY'] / df['AMT_CREDIT']
         df['DAYS_EMPLOYED_PERCENT'] = df['DAYS_EMPLOYED'] / df['DAYS_BIRTH']
         
-        # 2. Limpieza de valores anómalos en DAYS_EMPLOYED -
-        df['DAYS_EMPLOYED'].replace({365243: np.nan}, inplace=True)
+        # 2. Limpieza de valores anómalos en DAYS_EMPLOYED
+        df['DAYS_EMPLOYED'] = df['DAYS_EMPLOYED'].replace(365243, np.nan)
         
         # Nuevas reglas de limpieza proactiva
         df = self.clean_data(df)
