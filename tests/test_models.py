@@ -14,16 +14,29 @@ class TestMachineLearningPipeline:
     
     @pytest.fixture
     def mock_data(self):
-        """Genera un pequeño dataset dummy para pruebas con todas las columnas necesarias."""
+        """Genera un dataset dummy con una correlación sintética para tests estables."""
+        np.random.seed(42) # Semilla fija para consistencia
+        n_samples = 200 # Un poco más de datos para estabilidad
+        
+        income = np.random.uniform(20000, 100000, n_samples)
+        credit = np.random.uniform(100000, 500000, n_samples)
+        
+        # Creamos una probabilidad de default basada en el ratio deuda/ingreso
+        # A mayor ratio, mayor probabilidad de default (TARGET=1)
+        prob = (credit / income) 
+        prob = (prob - prob.min()) / (prob.max() - prob.min()) # Normalizar 0-1
+        
+        target = (prob > 0.7).astype(int)
+        
         data = {
-            'SK_ID_CURR': range(100),
-            'AMT_INCOME_TOTAL': np.random.uniform(20000, 100000, 100),
-            'AMT_CREDIT': np.random.uniform(100000, 500000, 100),
-            'AMT_ANNUITY': np.random.uniform(5000, 20000, 100),
-            'AMT_GOODS_PRICE': np.random.uniform(100000, 500000, 100),
-            'DAYS_BIRTH': np.random.uniform(-20000, -10000, 100),
-            'DAYS_EMPLOYED': np.random.uniform(-5000, 0, 100),
-            'TARGET': np.random.choice([0, 1], 100)
+            'SK_ID_CURR': range(n_samples),
+            'AMT_INCOME_TOTAL': income,
+            'AMT_CREDIT': credit,
+            'AMT_ANNUITY': np.random.uniform(5000, 20000, n_samples),
+            'AMT_GOODS_PRICE': credit * 0.9,
+            'DAYS_BIRTH': np.random.uniform(-20000, -10000, n_samples),
+            'DAYS_EMPLOYED': np.random.uniform(-5000, 0, n_samples),
+            'TARGET': target
         }
         return pd.DataFrame(data)
 
@@ -48,10 +61,14 @@ class TestMachineLearningPipeline:
     def test_feature_engineering_pipeline(self, mock_data):
         """Prueba que el pipeline de features puede procesar datos nuevos."""
         fe = FeatureEngineer()
-        X_train, X_test, y_train, y_test = fe.fit_transform(mock_data, test_size=0.2)
+        test_size = 0.2
+        X_train, X_test, y_train, y_test = fe.fit_transform(mock_data, test_size=test_size)
         
-        assert X_train.shape[0] == 80
-        assert X_test.shape[0] == 20
+        expected_train = int(len(mock_data) * (1 - test_size))
+        expected_test = int(len(mock_data) * test_size)
+        
+        assert X_train.shape[0] == expected_train
+        assert X_test.shape[0] == expected_test
         assert not np.isnan(X_train).any(), "Existen valores nulos tras el procesamiento"
 
     def test_model_training_and_prediction(self, mock_data):

@@ -15,6 +15,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 import xgboost as xgb
 import lightgbm as lgb
+import mlflow
+import mlflow.sklearn
 from src.models.hyperparameter_tuning import HyperparameterOptimizer
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import roc_auc_score, f1_score, precision_score, recall_score
@@ -159,31 +161,51 @@ class CreditRiskModel:
 
 def train_model(params: dict) -> None:
     """
-    Función principal de entrenamiento.
+    Función principal de entrenamiento con tracking de MLflow.
     """
     logger.info("=== INICIANDO PIPELINE DE ENTRENAMIENTO ===")
     
-    model_type = params['models']['model_type']
+    # Configurar MLflow
+    mlflow.set_experiment("Risk_Scoring_Model_Training")
     
-    credit_model = CreditRiskModel(model_type=model_type)
-    credit_model.load_data()
+    with mlflow.start_run(run_name=f"Training_{params['models']['model_type']}"):
+        model_type = params['models']['model_type']
+        mlflow.log_param("model_type", model_type)
+        
+        credit_model = CreditRiskModel(model_type=model_type)
+        credit_model.load_data()
 
-    # Chequear si debemos hacer HPO (valor por defecto False si no existe en yaml)
-    use_hpo = params['models'].get('use_hpo', False)
-    hpo_trials = params['models'].get('n_trials', 10)
-    best_params = None
+        # Chequear si debemos hacer HPO
+        use_hpo = params['models'].get('use_hpo', False)
+        mlflow.log_param("use_hpo", use_hpo)
+        
+        hpo_trials = params['models'].get('n_trials', 10)
+        best_params = None
 
-    if use_hpo:
-        best_params = credit_model.run_hpo(n_trials=hpo_trials)
-    
-    # Crear modelo (con o sin params optimizados)
-    credit_model.create_model(params=best_params)
-    
-    credit_model.train()
-    credit_model.validate()
-    credit_model.save_model()
-    
-    logger.info("=== PIPELINE DE ENTRENAMIENTO COMPLETADO ===")
+        if use_hpo:
+            mlflow.log_param("hpo_trials", hpo_trials)
+            best_params = credit_model.run_hpo(n_trials=hpo_trials)
+            # Log de mejores parámetros encontrados por Optuna
+            if best_params:
+                for k, v in best_params.items():
+                    mlflow.log_param(f"best_{k}", v)
+        
+        # Crear modelo (con o sin params optimizados)
+        credit_model.create_model(params=best_params)
+        
+        credit_model.train()
+        
+        # Validación y log de métricas
+        metrics = credit_model.validate()
+        mlflow.log_metrics(metrics)
+        
+        # Guardar modelo localmente y en MLflow
+        credit_model.save_model()
+        
+        model_file = f"models/{model_type}_model.joblib"
+        mlflow.log_artifact(model_file)
+        
+        logger.info("=== PIPELINE DE ENTRENAMIENTO COMPLETADO ===")
 
 
 if __name__ == "__main__":
