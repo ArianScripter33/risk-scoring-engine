@@ -67,11 +67,13 @@ def check_data_drift(reference_path: str, current_path: str, report_output: str,
         mlflow.log_metric("n_drifted_columns", n_drifted)
         mlflow.log_artifact(str(output_path), artifact_path="monitoring")
     
-    # Lógica de Alerta/Fallo
+    # Lógica de Alerta/Fallo (Emergency Stop)
     if drift_share > threshold:
-        logger.error(f"¡ALERTA DE DRIFT! El {drift_share*100:.1f}% de las columnas han derivado.")
+        logger.error(f"🚨 ¡FALLO CRÍTICO DE DRIFT! El {drift_share*100:.1f}% de las columnas han derivado.")
+        logger.error("Se recomienda NO continuar con el entrenamiento/inferencia hasta revisar los datos.")
         return False
         
+    logger.info("✅ Salud de los datos confirmada. Sin drift significativo.")
     return True
 
 if __name__ == "__main__":
@@ -88,14 +90,14 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    # Nota: Para la simulación inicial, comparamos el archivo con sí mismo.
-    # En producción, 'current' sería el nuevo lote de datos.
-    success = check_data_drift(args.reference, args.current, args.output, args.threshold)
-    
-    if not success:
-        logger.warning("El pipeline detectó un Drift significativo. Revisar reportes.")
-        # No salimos con error 1 aquí para permitir que el pipeline genere el reporte,
-        # pero en producción estricta podríamos hacerlo.
-        sys.exit(0) 
-    else:
-        sys.exit(0)
+    try:
+        success = check_data_drift(args.reference, args.current, args.output, args.threshold)
+        
+        if not success:
+            # Salimos con código 1 para detener cualquier pipeline automático (CI/CD o DVC)
+            sys.exit(1)
+        else:
+            sys.exit(0)
+    except Exception as e:
+        logger.error(f"Error inesperado en detección de drift: {str(e)}")
+        sys.exit(1)
