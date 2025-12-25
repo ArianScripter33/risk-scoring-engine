@@ -39,6 +39,7 @@ def validate_data(file_path: str):
     suite.add_expectation(gx.expectations.ExpectColumnToExist(column="SK_ID_CURR"))
     suite.add_expectation(gx.expectations.ExpectColumnToExist(column="TARGET"))
     suite.add_expectation(gx.expectations.ExpectColumnToExist(column="AMT_INCOME_TOTAL"))
+    suite.add_expectation(gx.expectations.ExpectColumnToExist(column="DAYS_BIRTH"))
     
     suite.add_expectation(gx.expectations.ExpectColumnValuesToBeInSet(
         column="TARGET", 
@@ -48,6 +49,13 @@ def validate_data(file_path: str):
     suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(
         column="AMT_INCOME_TOTAL",
         min_value=0
+    ))
+
+    # Nueva validación: Edad entre 18 y 120 años (en días negativos)
+    suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(
+        column="DAYS_BIRTH",
+        min_value=-43800,
+        max_value=-6570
     ))
     
     # 2. Definir el Data Asset
