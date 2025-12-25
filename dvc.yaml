@@ -14,6 +14,14 @@ stages:
       - src/data/validate_data.py
       - data/03_primary/credit_data_processed.csv
 
+  check_drift:
+    cmd: venv/bin/python src/monitoring/drift_detection.py --reference data/03_primary/credit_data_processed.csv --current data/03_primary/credit_data_processed.csv
+    deps:
+      - src/monitoring/drift_detection.py
+      - data/03_primary/credit_data_processed.csv
+    outs:
+      - reports/drift_report.html
+
   engineer_features:
     cmd: venv/bin/python src/features/build_features.py --input data/03_primary --output data/04_features
     deps:
