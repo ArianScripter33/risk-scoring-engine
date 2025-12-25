@@ -76,3 +76,15 @@ stages:
       hash: md5
       md5: 69d5ed0cc08260dcebb439aa8e1555f8
       size: 230
+  validate_data:
+    cmd: venv/bin/python src/data/validate_data.py --input 
+      data/03_primary/credit_data_processed.csv
+    deps:
+    - path: data/03_primary/credit_data_processed.csv
+      hash: md5
+      md5: 752a7656e2004da624ad0830c0e72dda
+      size: 14027
+    - path: src/data/validate_data.py
+      hash: md5
+      md5: 244d6db74071a6ddf2cd5c5353e9de26
+      size: 3333

@@ -8,6 +8,12 @@ stages:
     outs:
       - data/03_primary
 
+  validate_data:
+    cmd: venv/bin/python src/data/validate_data.py --input data/03_primary/credit_data_processed.csv
+    deps:
+      - src/data/validate_data.py
+      - data/03_primary/credit_data_processed.csv
+
   engineer_features:
     cmd: venv/bin/python src/features/build_features.py --input data/03_primary --output data/04_features
     deps:
