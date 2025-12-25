@@ -35,28 +35,48 @@ def validate_data(file_path: str):
     # 1. Definir la Suite de Expectativas
     suite = context.suites.add(gx.ExpectationSuite(name="credit_risk_suite"))
     
-    # Agregar expectativas
-    suite.add_expectation(gx.expectations.ExpectColumnToExist(column="SK_ID_CURR"))
-    suite.add_expectation(gx.expectations.ExpectColumnToExist(column="TARGET"))
-    suite.add_expectation(gx.expectations.ExpectColumnToExist(column="AMT_INCOME_TOTAL"))
-    suite.add_expectation(gx.expectations.ExpectColumnToExist(column="DAYS_BIRTH"))
+    # --- CONTRATO DE CALIDAD ---
     
+    # A. Existencia de Columnas Críticas
+    critical_cols = ["SK_ID_CURR", "TARGET", "AMT_INCOME_TOTAL", "DAYS_BIRTH", "AMT_CREDIT", "AMT_ANNUITY"]
+    for col in critical_cols:
+        suite.add_expectation(gx.expectations.ExpectColumnToExist(column=col))
+    
+    # B. Integridad de TARGET (Binario y No Nulo)
+    suite.add_expectation(gx.expectations.ExpectColumnValuesToNotBeNull(column="TARGET"))
     suite.add_expectation(gx.expectations.ExpectColumnValuesToBeInSet(
         column="TARGET", 
         value_set=[0, 1]
     ))
     
+    # C. Lógica de Negocio: Montos financieros
+    # Permitimos que hasta un 5% de los ingresos tengan ruido (mostly=0.95)
     suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(
         column="AMT_INCOME_TOTAL",
+        min_value=0,
+        mostly=0.95
+    ))
+    suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(
+        column="AMT_CREDIT",
+        min_value=0
+    ))
+    suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(
+        column="AMT_ANNUITY",
         min_value=0
     ))
 
-    # Nueva validación: Edad entre 18 y 120 años (en días negativos)
+    # D. Lógica de Negocio: Edad
     suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(
         column="DAYS_BIRTH",
         min_value=-43800,
         max_value=-6570
     ))
+    
+    # E. Integridad de Identificadores (Únicos y No Nulos)
+    suite.add_expectation(gx.expectations.ExpectColumnValuesToNotBeNull(column="SK_ID_CURR"))
+    suite.add_expectation(gx.expectations.ExpectColumnValuesToBeUnique(column="SK_ID_CURR"))
+    
+    # --- FIN DEL CONTRATO ---
     
     # 2. Definir el Data Asset
     datasource = context.data_sources.add_pandas(name="my_datasource")
@@ -84,6 +104,9 @@ def validate_data(file_path: str):
         for result in validation_results.results:
             if not result.success:
                 logger.warning(f"Fallo en: {result.expectation_config.type} - {result.expectation_config.kwargs}")
+                # Imprimir estadísticas de fallo si aplica
+                if 'unexpected_percent' in result.result:
+                    logger.warning(f"   --> Porcentaje de fallo: {result.result['unexpected_percent']:.2f}%")
         return False
 
 if __name__ == "__main__":
