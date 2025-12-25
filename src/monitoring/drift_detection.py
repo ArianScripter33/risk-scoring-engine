@@ -33,11 +33,12 @@ def check_data_drift(reference_path: str, current_path: str, report_output: str,
     reference_df = pd.read_csv(reference_path)
     current_df = pd.read_csv(current_path)
     
-    # Elegir columnas numéricas para el drift (excluyendo IDs)
-    cols_to_check = [col for col in reference_df.select_dtypes(include=[np.number]).columns 
+    # Seleccionar todas las columnas relevantes (excluyendo IDs y el Target)
+    # Incluimos tanto numéricas como categóricas para un monitoreo total
+    cols_to_check = [col for col in reference_df.columns 
                      if col not in ['SK_ID_CURR', 'TARGET']]
     
-    # Crear el reporte de Evidently
+    logger.info(f"Columnas a monitorear: {len(cols_to_check)}")
     drift_report = Report(metrics=[
         DataDriftPreset()
     ])
