@@ -112,4 +112,4 @@ La evolución de este motor de riesgo se centra en la adopción de **IA Agéntic
 
 ### Autor
 
-**[Tu Nombre]** - *AI Engineer & MLOps Architect*
+Arian Pedroza - *AI Engineer & MLOps Architect*
