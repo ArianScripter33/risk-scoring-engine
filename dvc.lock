@@ -2,63 +2,71 @@ schema: '2.0'
 stages:
   process_data:
     cmd: venv/bin/python src/data/make_dataset.py --input data/01_raw --output 
-      data/03_primary
+      data/03_primary --app-filename application_train_history.csv
     deps:
-    - path: data/01_raw
+    - path: data/01_raw/application_train_history.csv
       hash: md5
-      md5: d751713988987e9331980363e24189ce.dir
-      size: 0
-      nfiles: 0
+      md5: 039c86c9ada2bc60385bf13e3836ba6f
+      size: 148624241
+    - path: data/01_raw/bureau.csv
+      hash: md5
+      md5: ec0f59a16e7071de66b83217b23bb390
+      size: 170016717
     - path: src/data/make_dataset.py
       hash: md5
-      md5: 68248e5b9975eff5c54e9da3ff5bdf21
-      size: 4352
+      md5: 4d1ae33b3117014883eac4235198a69d
+      size: 4567
     outs:
     - path: data/03_primary
       hash: md5
-      md5: c73eaf0a7e3527a75d3a2333e8ef8de8.dir
-      size: 14027
+      md5: 7f5251ec03151cb75aff9af2f378d6ef.dir
+      size: 160107419
       nfiles: 1
   engineer_features:
-    cmd: venv/bin/python src/features/build_features.py --input data/03_primary 
-      --output data/04_features
+    cmd: export PYTHONPATH=$PYTHONPATH:$(pwd) && venv/bin/python 
+      src/features/build_features.py --input data/03_primary --output 
+      data/04_features
     deps:
     - path: data/03_primary
       hash: md5
-      md5: c73eaf0a7e3527a75d3a2333e8ef8de8.dir
-      size: 14027
+      md5: 7f5251ec03151cb75aff9af2f378d6ef.dir
+      size: 160107419
       nfiles: 1
     - path: src/features/build_features.py
       hash: md5
-      md5: f3dcb18a1abb81e94baf03eaef46ada1
-      size: 6989
+      md5: 81a8882a0f65b160a9877a0f46280df6
+      size: 8917
     outs:
     - path: data/04_features
       hash: md5
-      md5: 74a1e563c3b4c55e9326743b085b09aa.dir
-      size: 18654
+      md5: aa21e6f0904167a0b4b3408a92d3b992.dir
+      size: 562394910
       nfiles: 5
   train_model:
-    cmd: venv/bin/python src/models/train_model.py
+    cmd: export PYTHONPATH=$PYTHONPATH:$(pwd) && venv/bin/python 
+      src/models/train_model.py
     deps:
     - path: data/04_features
       hash: md5
-      md5: 74a1e563c3b4c55e9326743b085b09aa.dir
-      size: 18654
+      md5: aa21e6f0904167a0b4b3408a92d3b992.dir
+      size: 562394910
       nfiles: 5
     - path: src/models/train_model.py
       hash: md5
-      md5: 53523697c08f24ee13ea8bf781d20f65
-      size: 4324
+      md5: d40b4aa390d4ba51b9847d435f7cdfd9
+      size: 8393
     params:
       params.yaml:
         models:
-          model_type: logistic_regression
+          model_type: lightgbm
+          use_hpo: true
+          n_estimators: 100
+          max_depth: 10
     outs:
-    - path: models/credit_risk_model_logistic_regression.pkl
+    - path: models/lightgbm_model.joblib
       hash: md5
-      md5: 0159fb76fe2999932489c7612002dd28
-      size: 1007
+      md5: 2206d3971b167411862a7c442fa1b5ea
+      size: 5213668
   benchmark:
     cmd: venv/bin/python src/models/compare_models.py
     deps:
@@ -82,9 +90,27 @@ stages:
     deps:
     - path: data/03_primary/credit_data_processed.csv
       hash: md5
-      md5: 752a7656e2004da624ad0830c0e72dda
-      size: 14027
+      md5: 983a40d45b1e13e4dea83db3cbeea352
+      size: 160107419
     - path: src/data/validate_data.py
       hash: md5
-      md5: 244d6db74071a6ddf2cd5c5353e9de26
-      size: 3333
+      md5: 4fe90bf5973ad17e786080dd1e223e98
+      size: 4604
+  check_drift:
+    cmd: venv/bin/python src/monitoring/drift_detection.py --reference 
+      data/03_primary/credit_data_processed.csv --current 
+      data/03_primary/credit_data_processed.csv
+    deps:
+    - path: data/03_primary/credit_data_processed.csv
+      hash: md5
+      md5: 983a40d45b1e13e4dea83db3cbeea352
+      size: 160107419
+    - path: src/monitoring/drift_detection.py
+      hash: md5
+      md5: aa6512fbc1e619bb374df3c0807361ef
+      size: 4181
+    outs:
+    - path: reports/drift_report.html
+      hash: md5
+      md5: d72763f1a537ecad0125943743422596
+      size: 10126106
