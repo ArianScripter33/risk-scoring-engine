@@ -36,3 +36,17 @@ __pycache__/
 *.pyc
 models/*.joblib
 reports/
+
+# Data and Simulation (Tracked by DVC or temporary)
+data/01_raw/
+data/03_primary/
+data/04_features/
+data/simulation/
+
+# Secrets
+Keagle_JSON/
+.env
+
+# MLflow
+mlflow.db
+mlruns/

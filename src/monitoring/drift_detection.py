@@ -4,6 +4,7 @@ Script de detección de Data Drift usando Evidently AI.
 Su objetivo es detectar si las propiedades estadísticas de los datos han cambiado.
 """
 
+import os
 import pandas as pd
 import numpy as np
 from evidently import Report
@@ -63,10 +64,20 @@ def check_data_drift(reference_path: str, current_path: str, report_output: str,
     logger.info(f"Share de columnas con drift: {drift_share:.2f} ({int(n_drifted)} columnas)")
     
     # Loguear a MLflow
-    if mlflow.active_run():
+    experiment_name = os.getenv("MLFLOW_EXPERIMENT_NAME", "Default")
+    mlflow.set_experiment(experiment_name)
+    
+    # Si ya hay un run activo (ej. dvc), usamos ese. Si no, creamos uno.
+    active_run = mlflow.active_run()
+    if active_run:
         mlflow.log_metric("data_drift_share", drift_share)
         mlflow.log_metric("n_drifted_columns", n_drifted)
         mlflow.log_artifact(str(output_path), artifact_path="monitoring")
+    else:
+        with mlflow.start_run(run_name="drift_check"):
+            mlflow.log_metric("data_drift_share", drift_share)
+            mlflow.log_metric("n_drifted_columns", n_drifted)
+            mlflow.log_artifact(str(output_path), artifact_path="monitoring")
     
     # Lógica de Alerta/Fallo (Emergency Stop)
     if drift_share > threshold:

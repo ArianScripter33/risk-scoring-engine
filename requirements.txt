@@ -14,6 +14,8 @@ asyncssh==2.21.1
 atpublic==7.0.0
 attrs==25.4.0
 billiard==4.2.4
+black==25.12.0
+bleach==6.3.0
 blinker==1.9.0
 cachetools==6.2.4
 celery==5.6.0
@@ -86,8 +88,11 @@ Jinja2==3.1.6
 joblib==1.5.2
 jsonschema==4.25.1
 jsonschema-specifications==2025.9.1
+kaggle==1.8.3
+kagglesdk==0.1.14
 kiwisolver==1.4.9
 kombu==5.6.1
+librt==0.7.5
 lightgbm==4.6.0
 litestar==2.19.0
 litestar-htmx==0.5.0
@@ -104,6 +109,7 @@ mlflow-tracing==3.8.0
 msgspec==0.20.0
 multidict==6.7.0
 multipart==1.3.0
+mypy==1.19.1
 mypy_extensions==1.1.0
 networkx==3.6
 nltk==3.9.2
@@ -136,6 +142,7 @@ pycparser==2.23
 pydantic==2.12.5
 pydantic-settings==2.12.0
 pydantic_core==2.41.5
+pydeck==0.9.1
 pydot==4.0.1
 pygit2==1.19.0
 Pygments==2.19.2
@@ -145,6 +152,8 @@ pytest==9.0.2
 pytest-mock==3.15.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.1
+python-slugify==8.0.4
+pytokens==0.3.0
 pytz==2025.2
 PyYAML==6.0.3
 referencing==0.37.0
@@ -152,8 +161,6 @@ regex==2025.11.3
 requests==2.32.5
 rich==14.2.0
 rich-click==1.9.5
-requests==2.32.5
-rich==14.2.0
 rpds-py==0.30.0
 rsa==4.9.1
 ruamel.yaml==0.18.16
@@ -173,13 +180,19 @@ sqlparse==0.5.5
 sqltrie==0.11.2
 starlette==0.50.0
 statsmodels==0.14.6
+streamlit==1.52.2
 tabulate==0.9.0
 tenacity==9.1.2
+text-unidecode==1.3
 threadpoolctl==3.6.0
+toml==0.10.2
 tomlkit==0.13.3
 toolz==1.1.0
+tornado==6.5.4
 tqdm==4.67.1
 typer==0.20.0
+types-requests==2.32.4.20250913
+types-tqdm==4.67.0.20250809
 typing-inspect==0.9.0
 typing-inspection==0.4.2
 typing_extensions==4.15.0
@@ -195,6 +208,7 @@ voluptuous==0.15.2
 watchdog==6.0.0
 watchfiles==1.1.1
 wcwidth==0.2.14
+webencodings==0.5.1
 websockets==15.0.1
 Werkzeug==3.1.4
 xgboost==3.1.2

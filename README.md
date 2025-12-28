@@ -1,10 +1,63 @@
-# 🛡️ Risk Scoring Engine Professional
+# 🏦 Risk Scoring Engine: Production-Grade MLOps System
 
-Este repositorio contiene un sistema de **Machine Learning de Grado Industrial** para la evaluación de riesgo crediticio. El proyecto simula un entorno de producción real, aplicando metodologías de **MLOps**, **Ingeniería de Características** y **Arquitectura de Microservicios**.
+![Python Upgrade](https://img.shields.io/badge/Python-3.11-blue?logo=python) ![MLOps](https://img.shields.io/badge/MLOps-DVC%20%2B%20MLflow-green) ![FastAPI](https://img.shields.io/badge/API-FastAPI-teal?logo=fastapi) ![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit-red?logo=streamlit)
 
-## 🚀 Inicio Rápido
+> **"Un sistema robusto no es el que tiene el mejor modelo, sino el que sobrevive en producción."**
 
-### 1. Instalación
+Este repositorio contiene una arquitectura **End-to-End** de MLOps para la evaluación de riesgo crediticio. Diseñado para simular un entorno bancario real, integra desde la ingesta de datos crudos hasta un Dashboard de Monitoreo en tiempo real con detección de Data Drift.
+
+---
+
+## 🏗️ Technical Architecture
+
+El sistema no son solo scripts sueltos; es un ecosistema de microservicios.
+
+```mermaid
+graph TD
+    A[Kaggle Data Lake] -->|Ingest & Split| B(Data Engineering Pipeline)
+    B -->|DVC Tracking| C{Model Training Factory}
+    C -->|Optuna HPO| D[LightGBM Champion Model]
+    D -->|Deploy| E[FastAPI Inference Engine]
+    E -->|Real-time Scoring| F(Streamlit Control Tower)
+    
+    subgraph Observability
+    G[Production Simulation Loop] -->|Drift Detection| H[Evidently AI Radar]
+    H -->|Alerts| F
+    C -->|Metrics| I[MLflow Tracking Server]
+    end
+```
+
+### 1. 🧠 Motor de Inteligencia (Core ML)
+
+* **Champion Model**: LightGBM optimizado con **Optuna** (MedianPruner).
+* **Feature Engineering**: Pipeline persistente (`.pkl`) que asegura cero *Training-Serving Skew*. Transforma datos crudos, imputa nulos y aplica *One-Hot Encoding* automáticamente.
+* **Performance**: AUC ROC de **0.769** (Top ~40% competitivo), optimizado para baja latencia (<50ms).
+
+### 2. 🛡️ Búnker de Monitoreo (Observability)
+
+* **Emergency Stop**: Sistema automatizado que bloquea inferencias si el **Data Drift** supera el umbral del 1%.
+* **Simulación de "Cisne Negro"**: Scripts dedicados para estresar el sistema inyectando datos corruptos y validando la respuesta de las alertas.
+* **Evidently AI + MLflow**: Generación de reportes HTML profundos sobre la salud estadística de los datos.
+
+### 3. 🚀 Capa de Servicio (Production API)
+
+* **FastAPI**: Inferencia asíncrona de alto rendimiento.
+* **Robustez**: Auto-complete inteligente de features faltantes (maneja JSONs incompletos sin romper el servicio).
+* **Endpoints**:
+  * `POST /predict`: Scoring en tiempo real.
+  * `GET /drift-status`: Semáforo de salud del sistema.
+
+### 4. 🗼 Torre de Control (Dashboard)
+
+* **Streamlit Premium UI**: Interfaz visual para stakeholders.
+* **Simulador Interactivo**: Permite a analistas de riesgo probar escenarios hipotéticos.
+* **Métricas en Vivo**: Tasa de aprobación, volumen de solicitudes y alertas de drift.
+
+---
+
+## ⚡ Quick Start
+
+### 1. Setup del Entorno
 
 ```bash
 python -m venv venv
@@ -12,72 +65,51 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Ejecución del Pipeline (Orquestación con DVC)
+### 2. Ejecutar la Simulación Completa
 
-El motor utiliza **DVC** para garantizar la reproducibilidad. Para ejecutar el pipeline completo (desde limpieza de datos hasta entrenamiento):
+Este comando orquesta todo: descarga datos, entrena el modelo y simula tráfico de producción.
 
 ```bash
 dvc repro
 ```
 
-### 3. Lanzar la API de Producción (FastAPI)
+### 3. Lanzar el Sistema (Dual Terminal)
+
+**Terminal 1: El Cerebro (API)**
 
 ```bash
-export PYTHONPATH=$PYTHONPATH:$(pwd)
-python src/api/main.py
+venv/bin/python src/api/app.py
+# Running on http://localhost:8000
 ```
 
-## 🏗️ Arquitectura Técnica
-
-El sistema está diseñado bajo un paradigma modular:
-
-1. **Ingeniería de Variables (`src/features`)**: Saneo proactivo de datos utilizando **Winsorization** y **Clipping** para manejar outliers. Generación de ratios financieros (Domain Knowledge).
-2. **Optimización Automática (`src/models`)**: Uso de **Optuna** con **MedianPruner** para una búsqueda de hiperparámetros eficiente.
-3. **Benchmarking de Modelos**: Selección automática del "Champion Model" comparando LightGBM, Random Forest y Regresión Logística.
-4. **Capa de Validación (`tests/`)**: Pruebas unitarias de integridad de datos, prevención de leakage e idempotencia.
-5. **Service Layer (`src/api`)**: Inferencia en tiempo real con FastAPI, validación de esquemas con Pydantic y documentación automática (Swagger).
-
-## 📡 Documentación de la API
-
-La API ofrece inferencia de alta performance. Puedes probarla en [http://localhost:8000/docs](http://localhost:8000/docs).
-
-### Ejemplo de Predicción (cURL)
+**Terminal 2: La Cara (Dashboard)**
 
 ```bash
-curl -X 'POST' 'http://localhost:8000/predict' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "AMT_INCOME_TOTAL": 100000,
-    "AMT_CREDIT": 500000,
-    "AMT_ANNUITY": 25000,
-    "AMT_GOODS_PRICE": 450000,
-    "DAYS_BIRTH": -15000,
-    "DAYS_EMPLOYED": -2000,
-    "NAME_CONTRACT_TYPE": "Cash loans",
-    "DAYS_CREDIT_mean": -1000,
-    "AMT_CREDIT_SUM_sum": 1000000
-  }'
+venv/bin/streamlit run src/ui/dashboard.py
+# Running on http://localhost:8501
 ```
 
-**Respuesta Saludable:**
+---
 
-```json
-{
-  "probability": 0.2606,
-  "prediction": 0,
-  "risk_level": "Low",
-  "model_version": "1.0.0"
-}
-```
+## Estrategia de Validación
 
-## 🧠 Decisiones de Diseño Key
+* **Offline Evaluation**: Cross-validation estratificado para asegurar estabilidad en clases desbalanceadas (Default vs Pay).
+* **Online Monitoring**: El sistema calcula diariamente la distancia estadística (**Jensen-Shannon** y **Kolmogorov-Smirnov**) entre los datos de entrenamiento y los de producción.
 
-- **Umbral de Decisión**: Establecido en 0.5 por defecto, aunque parametriza para ser ajustado según el costo del error (False Negative vs False Positive) del banco.
-- **Serialización con Joblib**: Utilizada por su alta eficiencia en el manejo de arreglos de Numpy pesados en modelos de ensambles.
-- **Persistent FeatureEngineer**: No solo guardamos el modelo, sino el objeto completo de ingeniería de variables para asegurar que la API limpie los datos exactamente igual que el entrenamiento.
+## � Futuro del Proyecto & Investigación
 
-## 🛠️ Stack Principal
+La evolución de este motor de riesgo se centra en la adopción de **IA Agéntica Avanzada** para automatizar la optimización continua:
 
-- **ML**: Scikit-Learn, LightGBM, XGBoost, Optuna.
-- **Data**: Pandas, Numpy.
-- **Infra**: FastAPI, DVC, PyTest, Pydantic.
+1. **Integración de Agentes Autónomos (Google Research Inspired)**:
+    * Implementación de agentes basados en papers como **"ML Agent Data Scientist"** para la exploración autónoma de hipótesis.
+    * Despliegue de arquitecturas tipo **Start-Agents** que orquesten el ciclo de vida completo del ML.
+
+2. **Advanced Feature Engineering con ROI Máximo**:
+    * Delegar a los agentes la creación de features complejas (polinómicas, interacciones no lineales) que usualmente requieren semanas de trabajo manual.
+    * Evaluación automatizada de **Redes Neuronales** y arquitecturas **Stacking** ligeras, permitiendo que el agente decida si el aumento de complejidad computacional justifica la ganancia en AUC.
+
+---
+
+### Autor
+
+Arian Pedroza - *AI Engineer & MLOps Architect*

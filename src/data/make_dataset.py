@@ -49,12 +49,12 @@ def create_dummy_data() -> tuple:
     return df_app_train, df_bureau
 
 
-def load_and_merge_data(input_path: str) -> pd.DataFrame:
+def load_and_merge_data(input_path: str, app_filename: str = "application_train.csv") -> pd.DataFrame:
     """
-    Carga los datos de application_train.csv y bureau.csv, y los une.
+    Carga los datos de aplicación y bureau, y los une.
     """
     input_path = Path(input_path)
-    app_train_path = input_path / 'application_train.csv'
+    app_train_path = input_path / app_filename
     bureau_path = input_path / 'bureau.csv'
 
     if not app_train_path.exists() or not bureau_path.exists():
@@ -92,13 +92,13 @@ def save_data(df: pd.DataFrame, output_path: str) -> None:
     logger.info(f"Datos guardados exitosamente en: {output_file}")
 
 
-def main(input_path: str = "data/01_raw", output_path: str = "data/03_primary") -> None:
+def main(input_path: str = "data/01_raw", output_path: str = "data/03_primary", app_filename: str = "application_train.csv") -> None:
     """
     Función principal que orquesta el proceso.
     """
     logger.info("Iniciando proceso de procesamiento de datos")
     try:
-        df_merged = load_and_merge_data(input_path)
+        df_merged = load_and_merge_data(input_path, app_filename)
         save_data(df_merged, output_path)
         logger.info("Proceso de procesamiento de datos completado exitosamente")
     except Exception as e:
@@ -110,5 +110,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Procesamiento de datos de crédito')
     parser.add_argument('--input', '-i', default='data/01_raw', help='Ruta a los datos crudos')
     parser.add_argument('--output', '-o', default='data/03_primary', help='Ruta de salida para datos procesados')
+    parser.add_argument('--app-filename', default='application_train.csv', help='Nombre del archivo de aplicación')
     args = parser.parse_args()
-    main(args.input, args.output)
+    main(args.input, args.output, args.app_filename)
