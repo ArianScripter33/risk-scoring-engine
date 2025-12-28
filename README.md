@@ -91,16 +91,22 @@ venv/bin/streamlit run src/ui/dashboard.py
 
 ---
 
-## � Estrategia de Validación
+## Estrategia de Validación
 
 * **Offline Evaluation**: Cross-validation estratificado para asegurar estabilidad en clases desbalanceadas (Default vs Pay).
 * **Online Monitoring**: El sistema calcula diariamente la distancia estadística (**Jensen-Shannon** y **Kolmogorov-Smirnov**) entre los datos de entrenamiento y los de producción.
 
-## 🔜 Roadmap: La Era de los Agentes
+## � Futuro del Proyecto & Investigación
 
-El siguiente paso natural de esta arquitectura es la integración de **Agentes Autónomos (LLMs)**.
-* [ ] Implementar un Agente ReAct que consulte la API de riesgo y fuentes externas (Google Search) para enriquecer la decisión de crédito.
-* [ ] Generación automática de explicaciones de rechazo (XAI) usando GPT-4.
+La evolución de este motor de riesgo se centra en la adopción de **IA Agéntica Avanzada** para automatizar la optimización continua:
+
+1. **Integración de Agentes Autónomos (Google Research Inspired)**:
+    * Implementación de agentes basados en papers como **"ML Agent Data Scientist"** para la exploración autónoma de hipótesis.
+    * Despliegue de arquitecturas tipo **Start-Agents** que orquesten el ciclo de vida completo del ML.
+
+2. **Advanced Feature Engineering con ROI Máximo**:
+    * Delegar a los agentes la creación de features complejas (polinómicas, interacciones no lineales) que usualmente requieren semanas de trabajo manual.
+    * Evaluación automatizada de **Redes Neuronales** y arquitecturas **Stacking** ligeras, permitiendo que el agente decida si el aumento de complejidad computacional justifica la ganancia en AUC.
 
 ---
 
