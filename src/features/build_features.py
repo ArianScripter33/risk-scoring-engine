@@ -136,10 +136,11 @@ class FeatureEngineer:
         X = df_engineered.drop(['SK_ID_CURR', 'TARGET'], axis=1, errors='ignore')
         y = df_engineered['TARGET']
         
-        # 2. Split Estratificado (ANTES de cualquier cálculo estadístico)
-        logger.info(f"Realizando split Train/Test (test_size={test_size})")
+        # 2. Split Temporal OOT (ANTES de cualquier cálculo estadístico)
+        # CRÍTICO: shuffle=False y sin stratify para mantener la flecha del tiempo intacta
+        logger.info(f"Realizando split temporal Train/Test (test_size={test_size})")
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=test_size, random_state=random_state, stratify=y
+            X, y, test_size=test_size, shuffle=False
         )
         
         # 3. Crear y Ajustar Pipeline SOLO con datos de entrenamiento

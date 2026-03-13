@@ -57,26 +57,33 @@ def load_and_merge_data(input_path: str, app_filename: str = "application_train.
     app_train_path = input_path / app_filename
     bureau_path = input_path / 'bureau.csv'
 
-    if not app_train_path.exists() or not bureau_path.exists():
-        df_app_train, df_bureau = create_dummy_data()
-    else:
-        logger.info(f"Cargando datos desde: {app_train_path} y {bureau_path}")
+    # Siempre cargar app_train real si existe
+    if app_train_path.exists():
+        logger.info(f"Cargando datos principales desde: {app_train_path}")
         df_app_train = pd.read_csv(app_train_path)
+    else:
+        logger.warning(f"No se encontró {app_train_path}. Usando datos dummy.")
+        df_app_train, _ = create_dummy_data()
+
+    if bureau_path.exists():
+        logger.info(f"Cargando datos de bureau desde: {bureau_path}")
         df_bureau = pd.read_csv(bureau_path)
+        logger.info("Realizando agregaciones en el dataset de bureau...")
+        bureau_agg = df_bureau.groupby('SK_ID_CURR').agg({
+            'DAYS_CREDIT': ['mean', 'max', 'min'],
+            'AMT_CREDIT_SUM': ['sum', 'mean'],
+        }).reset_index()
 
-    logger.info("Realizando agregaciones en el dataset de bureau...")
-    bureau_agg = df_bureau.groupby('SK_ID_CURR').agg({
-        'DAYS_CREDIT': ['mean', 'max', 'min'],
-        'AMT_CREDIT_SUM': ['sum', 'mean'],
-    }).reset_index()
+        bureau_agg.columns = ['_'.join(col).strip() for col in bureau_agg.columns.values]
+        bureau_agg.rename(columns={'SK_ID_CURR_': 'SK_ID_CURR'}, inplace=True)
 
-    bureau_agg.columns = ['_'.join(col).strip() for col in bureau_agg.columns.values]
-    bureau_agg.rename(columns={'SK_ID_CURR_': 'SK_ID_CURR'}, inplace=True)
+        logger.info("Uniendo application_train con los datos agregados de bureau...")
+        df_merged = pd.merge(df_app_train, bureau_agg, on='SK_ID_CURR', how='left')
+    else:
+        logger.warning(f"No se encontró {bureau_path}. Omitiendo features de bureau.")
+        df_merged = df_app_train
 
-    logger.info("Uniendo application_train con los datos agregados de bureau...")
-    df_merged = pd.merge(df_app_train, bureau_agg, on='SK_ID_CURR', how='left')
-
-    logger.info(f"Datos cargados y unidos exitosamente: {df_merged.shape[0]} filas, {df_merged.shape[1]} columnas")
+    logger.info(f"Datos preparados: {df_merged.shape[0]} filas, {df_merged.shape[1]} columnas")
     return df_merged
 
 

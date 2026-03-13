@@ -5,7 +5,6 @@ stages:
     deps:
       - src/data/make_dataset.py
       - data/01_raw/application_train_history.csv
-      - data/01_raw/bureau.csv
     outs:
       - data/03_primary
 
@@ -16,10 +15,11 @@ stages:
       - data/03_primary/credit_data_processed.csv
 
   check_drift:
-    cmd: venv/bin/python src/monitoring/drift_detection.py --reference data/03_primary/credit_data_processed.csv --current data/03_primary/credit_data_processed.csv
+    cmd: venv/bin/python src/monitoring/drift_detection.py --reference data/03_primary/credit_data_processed.csv --current data/simulation/future_stream/batch_1.csv
     deps:
       - src/monitoring/drift_detection.py
       - data/03_primary/credit_data_processed.csv
+      - data/simulation/future_stream/batch_1.csv
     outs:
       - reports/drift_report.html
 

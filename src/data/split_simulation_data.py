@@ -30,9 +30,9 @@ def split_master_data():
     df = pd.read_csv(raw_path)
     logger.info(f"Dataset cargado: {df.shape[0]} registros.")
     
-    # 1. Realizar el split (90% historia, 10% simulación)
-    # Usamos random_state=42 para que siempre obtengamos los mismos grupos
-    df_history, df_future = train_test_split(df, test_size=0.10, random_state=42)
+    # 1. Realizar el split temporal OOT (Out-Of-Time) (90% historia, 10% simulación)
+    # CRÍTICO: shuffle=False para mantener el orden cronológico y emular un "Cambio de Régimen" real.
+    df_history, df_future = train_test_split(df, test_size=0.10, shuffle=False)
     
     # 2. Crear carpetas de salida
     output_base.mkdir(parents=True, exist_ok=True)

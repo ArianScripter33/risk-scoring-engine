@@ -121,8 +121,10 @@ class CreditRiskModel:
         """Realiza validación y evaluación multimetrica del modelo."""
         logger.info("Realizando validación del modelo")
 
-        # 1. Validación cruzada (Sobre AUC para evaluar estabilidad del ranking)
-        cv_scores = cross_val_score(self.model, self.X_train, self.y_train, cv=5, scoring='roc_auc')
+        # 1. Validación cruzada Temporal (Sobre AUC para evaluar estabilidad en el tiempo)
+        from sklearn.model_selection import TimeSeriesSplit
+        tscv = TimeSeriesSplit(n_splits=5)
+        cv_scores = cross_val_score(self.model, self.X_train, self.y_train, cv=tscv, scoring='roc_auc')
         cv_auc_mean = cv_scores.mean()
         cv_auc_std = cv_scores.std()
         
